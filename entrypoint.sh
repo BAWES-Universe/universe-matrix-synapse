@@ -20,12 +20,12 @@ REQUIRED_VARS=(
 )
 
 # S3 variables are optional (commented out S3 storage for now)
+# Uncomment these when S3 storage is properly configured:
 # "S3_BUCKET_NAME"
 # "S3_REGION"
 # "S3_ACCESS_KEY_ID"
 # "S3_SECRET_ACCESS_KEY"
 # "S3_ENDPOINT_URL"
-)
 
 MISSING_VARS=()
 for var in "${REQUIRED_VARS[@]}"; do
