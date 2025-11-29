@@ -36,6 +36,14 @@ fi
 echo "Generating homeserver.yaml from template..."
 envsubst < /data/homeserver.yaml.template > /data/homeserver.yaml
 
+# Verify the generated config is valid
+if [[ ! -f /data/homeserver.yaml ]]; then
+  echo "ERROR: Failed to generate homeserver.yaml"
+  exit 1
+fi
+
+echo "Configuration generated successfully"
+
 # Generate log config if it doesn't exist
 LOG_CONFIG="/data/${SYNAPSE_SERVER_NAME}.log.config"
 if [[ ! -f "$LOG_CONFIG" ]]; then
@@ -73,7 +81,7 @@ loggers:
 
 root:
     level: INFO
-    handlers: [buffer]
+    handlers: [buffer, console]
 
 disable_existing_loggers: false
 EOF
@@ -83,15 +91,20 @@ fi
 SIGNING_KEY="/data/${SYNAPSE_SERVER_NAME}.signing.key"
 if [[ ! -f "$SIGNING_KEY" ]]; then
   echo "Generating signing key..."
+  # Generate only the signing key, don't regenerate config
   python -m synapse.app.homeserver \
     --config-path /data/homeserver.yaml \
     --generate-keys \
-    --generate-config \
-    --report-stats=no || true
+    --report-stats=no || {
+    echo "Warning: Signing key generation may have failed, but continuing..."
+  }
 fi
 
 # Ensure proper permissions
 chmod -R 755 /data
+
+# Note: Database migrations are handled automatically by Synapse on startup
+# Synapse will wait for the database and run migrations as needed
 
 # Database migrations are handled automatically by Synapse on startup
 # No need to run them separately
@@ -107,5 +120,11 @@ fi
 
 # Start Synapse
 echo "Starting Synapse..."
+echo "Server name: ${SYNAPSE_SERVER_NAME}"
+echo "Public base URL: ${SYNAPSE_PUBLIC_BASEURL}"
+echo "Database host: ${POSTGRES_HOST}"
+echo "Starting Synapse server..."
+
+# Start Synapse in foreground
 exec python -m synapse.app.homeserver --config-path /data/homeserver.yaml
 
