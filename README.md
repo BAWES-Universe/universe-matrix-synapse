@@ -6,6 +6,7 @@ This repository contains a production-ready Matrix Synapse server configuration 
 
 - Production-ready Synapse configuration
 - PostgreSQL database support
+- S3 storage for media files (scalable and cost-effective)
 - Authentik OIDC authentication integration
 - No guest access (security best practice)
 - Registration only through OIDC (no public registration)
@@ -66,6 +67,13 @@ openssl rand -base64 32  # For SYNAPSE_FORM_SECRET
 - `AUTHENTIK_CLIENT_ID` - OIDC client ID from Authentik
 - `AUTHENTIK_CLIENT_SECRET` - OIDC client secret from Authentik
 
+**Railway Bucket Storage (Required for media files):**
+- `S3_BUCKET_NAME` - Your Railway bucket name
+- `S3_REGION` - Region (can be any value, Railway buckets are region-agnostic, e.g., `us-east-1`)
+- `S3_ACCESS_KEY_ID` - Access key from Railway bucket credentials
+- `S3_SECRET_ACCESS_KEY` - Secret key from Railway bucket credentials
+- `S3_ENDPOINT_URL` - **Required for Railway buckets** - Endpoint URL from Railway bucket credentials
+
 **Optional:**
 - `JWT_SECRET` - JWT secret for WorkAdventure integration (if needed)
 - `MATRIX_ADMIN_USER` - Admin username (only used on first run)
@@ -77,13 +85,52 @@ openssl rand -base64 32  # For SYNAPSE_FORM_SECRET
 2. Add a custom domain: `chat.bawes.net`
 3. Railway will provide SSL certificates automatically
 
-### 4. Configure Persistent Volume
+### 4. Persistent Volume (Automatic - No Configuration Needed)
 
-Railway will automatically handle persistent storage for the `/data` directory, which contains:
-- Signing keys
-- Media store
-- Logs
-- Configuration files
+**Important:** Railway **automatically** provides persistent storage for the `/data` directory. **You do NOT need to manually create a volume** - Railway handles this automatically.
+
+The persistent `/data` directory is **required** for:
+- **Signing keys** (`/data/chat.bawes.net.signing.key`) - **CRITICAL**: Must be persistent. Losing this key will break federation with other Matrix servers.
+- Logs and configuration files
+
+**Note:** Media files are stored in Railway's bucket service (configured in step 5), so they don't require persistent volume storage. This makes the deployment more scalable and cost-effective.
+
+### 5. Configure Railway Bucket Storage
+
+Media files (images, videos, files) are stored in Railway's bucket service instead of local storage. This provides:
+- Better scalability
+- Lower costs for large media files
+- Ability to share storage across multiple instances
+- Integrated with Railway infrastructure
+
+**Where to configure Railway Bucket:**
+
+1. **Create a Railway Bucket:**
+   - In your Railway project, right-click on the canvas (or click the "+" button)
+   - Select **"Bucket"** from the service options
+   - Choose your desired region
+   - Railway will create the bucket and provide credentials automatically
+
+2. **Get Bucket Credentials:**
+   - Click on the bucket service in your Railway project
+   - Go to the **"Credentials"** tab
+   - You'll see the following values:
+     - `BUCKET_NAME` - Your bucket name
+     - `ACCESS_KEY_ID` - Access key
+     - `SECRET_ACCESS_KEY` - Secret key
+     - `ENDPOINT` - S3-compatible endpoint URL (this is important!)
+
+3. **Set environment variables in Railway:**
+   - Go to your **Synapse service** in Railway (not the bucket service)
+   - Navigate to **Variables** tab
+   - Add the bucket configuration variables:
+     - `S3_BUCKET_NAME` - Copy from bucket's `BUCKET_NAME`
+     - `S3_REGION` - Can be any value (e.g., `us-east-1`), Railway buckets are region-agnostic
+     - `S3_ACCESS_KEY_ID` - Copy from bucket's `ACCESS_KEY_ID`
+     - `S3_SECRET_ACCESS_KEY` - Copy from bucket's `SECRET_ACCESS_KEY`
+     - `S3_ENDPOINT_URL` - **Required!** Copy from bucket's `ENDPOINT`
+
+**Important:** Railway buckets use S3-compatible API, so you **must** set `S3_ENDPOINT_URL` with the endpoint value from your bucket's credentials.
 
 ## Authentik OIDC Configuration
 
@@ -151,6 +198,15 @@ The server exposes metrics on port 9090 (internal). Railway health checks use th
 ### Signing Key Issues
 
 The signing key is automatically generated on first run. If you need to regenerate it, delete the key file in the persistent volume and restart the service.
+
+**Important:** Never delete or lose your signing key! It's stored in the persistent volume at `/data/chat.bawes.net.signing.key`. Losing this key will break federation with other Matrix servers.
+
+### Railway Bucket Storage Issues
+
+- **Media uploads failing**: Check that your Railway bucket exists and is connected to the same project
+- **Access denied errors**: Verify `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` are correct (copy from bucket's Credentials tab)
+- **Connection errors**: Ensure `S3_ENDPOINT_URL` is set correctly - this is **required** for Railway buckets
+- **Missing endpoint**: Railway buckets require `S3_ENDPOINT_URL` to be set - get this from the bucket's Credentials tab
 
 ## Local Development
 

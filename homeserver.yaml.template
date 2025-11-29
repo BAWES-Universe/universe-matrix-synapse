@@ -36,7 +36,23 @@ database:
     cp_max: 10
 
 log_config: "/data/${SYNAPSE_SERVER_NAME}.log.config"
-media_store_path: /data/media_store
+
+# S3 media storage configuration
+# Media files are stored in S3 instead of local filesystem for better scalability
+media_storage_providers:
+  - module: s3_storage_provider.S3StorageProvider
+    store_local: true
+    store_remote: true
+    store_synchronous: true
+    config:
+      bucket: ${S3_BUCKET_NAME}
+      region_name: ${S3_REGION}
+      access_key_id: ${S3_ACCESS_KEY_ID}
+      secret_access_key: ${S3_SECRET_ACCESS_KEY}
+      # Required for Railway buckets and S3-compatible services
+      # Railway buckets require this endpoint URL from the bucket's credentials
+      endpoint_url: ${S3_ENDPOINT_URL}
+
 report_stats: true
 
 # Secrets from environment variables

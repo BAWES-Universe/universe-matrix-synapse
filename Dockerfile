@@ -1,7 +1,10 @@
 FROM matrixdotorg/synapse:latest
 
-# Install gettext-base for envsubst
+# Install gettext-base for envsubst and pip for S3 storage provider
 RUN apt-get update && apt-get install -y gettext-base && rm -rf /var/lib/apt/lists/*
+
+# Install S3 storage provider for Synapse
+RUN pip install --no-cache-dir synapse-s3-storage-provider
 
 # Create data directory
 RUN mkdir -p /data
