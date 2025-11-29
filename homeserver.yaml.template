@@ -34,6 +34,9 @@ database:
     database: ${POSTGRES_DATABASE}
     cp_min: 5
     cp_max: 10
+  # Allow Railway's default collation (en_US.utf8) instead of requiring 'C'
+  # Railway's managed PostgreSQL uses en_US.utf8 which works fine for Synapse
+  allow_unsafe_locale: true
 
 log_config: "/data/${SYNAPSE_SERVER_NAME}.log.config"
 
