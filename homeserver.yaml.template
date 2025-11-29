@@ -1,0 +1,151 @@
+# Configuration file for Synapse.
+#
+# This is a YAML file: see [1] for a quick introduction. Note in particular
+# that *indentation is important*: all the elements of a list or dictionary
+# should have the same indentation.
+#
+# [1] https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
+#
+# For more information on how to configure Synapse, including a complete accounting of
+# each option, go to docs/usage/configuration/config_documentation.md or
+# https://matrix-org.github.io/synapse/latest/usage/configuration/config_documentation.html
+
+server_name: "${SYNAPSE_SERVER_NAME}"
+public_baseurl: "${SYNAPSE_PUBLIC_BASEURL}"
+pid_file: /data/homeserver.pid
+
+listeners:
+  - port: 8008
+    tls: false
+    type: http
+    x_forwarded: true
+    resources:
+      - names: [ client, federation ]
+        compress: false
+
+# PostgreSQL database configuration
+database:
+  name: psycopg2
+  args:
+    user: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    host: ${POSTGRES_HOST}
+    port: ${POSTGRES_PORT:-5432}
+    database: ${POSTGRES_DATABASE}
+    cp_min: 5
+    cp_max: 10
+
+log_config: "/data/${SYNAPSE_SERVER_NAME}.log.config"
+media_store_path: /data/media_store
+report_stats: true
+
+# Secrets from environment variables
+registration_shared_secret: "${SYNAPSE_REGISTRATION_SHARED_SECRET}"
+macaroon_secret_key: "${SYNAPSE_MACAROON_SECRET_KEY}"
+form_secret: "${SYNAPSE_FORM_SECRET}"
+signing_key_path: "/data/${SYNAPSE_SERVER_NAME}.signing.key"
+
+trusted_key_servers:
+  - server_name: "matrix.org"
+suppress_key_server_warning: true
+
+# JWT configuration (if needed for WorkAdventure)
+jwt_config:
+  enabled: true
+  secret: "${JWT_SECRET:-}"
+  algorithm: "HS256"
+  subject_claim: "matrixUserId"
+
+# Authentik OIDC provider configuration
+oidc_providers:
+  - idp_id: authentik
+    idp_name: Authentik
+    issuer: "${AUTHENTIK_ISSUER}"
+    skip_verification: false
+    client_id: "${AUTHENTIK_CLIENT_ID}"
+    client_secret: "${AUTHENTIK_CLIENT_SECRET}"
+    scopes: [ "openid", "email", "profile" ]
+    user_profile_method: "userinfo_endpoint"
+    user_mapping_provider:
+      config:
+        localpart_template: "{{ user.email.split('@')[0] }}"
+        display_name_template: "{{ user.name }}"
+        email_template: "{{ user.email }}"
+
+# SSO client whitelist (configure for WorkAdventure domains if needed)
+sso:
+  client_whitelist: []
+
+# Production security settings - no guest access, no public registration
+enable_registration: false
+enable_registration_without_verification: false
+turn_allow_guests: false
+allow_guest_access: false
+
+# User directory configuration
+user_directory:
+  search_all_users: true
+
+# Rate limiting - production values
+rc_login:
+  address:
+    per_second: 0.17
+    burst_count: 3
+  account:
+    per_second: 0.17
+    burst_count: 3
+  failed_attempts:
+    per_second: 0.17
+    burst_count: 3
+
+# Message rate limiting
+rc_message:
+  per_second: 0.2
+  burst_count: 10
+
+# Federation rate limiting
+rc_registration:
+  per_second: 0.17
+  burst_count: 3
+
+# Room creation rate limiting
+rc_joins:
+  local:
+    per_second: 0.1
+    burst_count: 10
+  remote:
+    per_second: 0.01
+    burst_count: 10
+
+# Media rate limiting
+rc_media:
+  per_second: 0.01
+  burst_count: 5
+
+# Room complexity limits
+limit_remote_rooms:
+  enabled: true
+  complexity: 1.0
+  complexity_error: 0.5
+
+# Enable metrics for monitoring
+enable_metrics: true
+metrics_port: 9090
+
+# Retention policy (optional - adjust as needed)
+retention:
+  enabled: false
+
+# Content repository settings
+max_upload_size: "50M"
+max_image_pixels: 32M
+
+# Email configuration (if needed for notifications)
+# email:
+#   smtp_host: "smtp.example.com"
+#   smtp_port: 587
+#   smtp_user: "noreply@example.com"
+#   smtp_pass: "password"
+#   notif_from: "Matrix <noreply@example.com>"
+#   enable_notifs: true
+
