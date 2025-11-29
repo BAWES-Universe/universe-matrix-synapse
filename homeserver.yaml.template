@@ -94,9 +94,11 @@ oidc_providers:
         display_name_template: "{{ user.name }}"
         email_template: "{{ user.email }}"
 
-# SSO client whitelist (configure for WorkAdventure domains if needed)
+# SSO client whitelist (configure for WorkAdventure domains)
 sso:
-  client_whitelist: []
+  client_whitelist:
+    - http://pusher.workadventure.localhost/
+    - http://play.workadventure.localhost/
 
 # Production security settings - no guest access, no public registration
 enable_registration: false
