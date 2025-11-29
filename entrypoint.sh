@@ -120,18 +120,72 @@ chmod -R 755 /data
 # Database migrations are handled automatically by Synapse on startup
 # No need to run them separately
 
-# Note: Admin user creation is skipped during startup because Synapse must be running first
-# To create an admin user after Synapse starts, run:
-#   register_new_matrix_user -c /data/homeserver.yaml -u <username> -p <password> -a
-# Or use the admin API once Synapse is running
+# Function to wait for Synapse to be ready
+wait_for_synapse() {
+  echo "Waiting for Synapse to be ready..."
+  local max_attempts=60
+  local attempt=0
+  
+  while [ $attempt -lt $max_attempts ]; do
+    if python -c "import urllib.request; urllib.request.urlopen('http://localhost:8008/_matrix/client/versions')" > /dev/null 2>&1; then
+      echo "Synapse is ready!"
+      return 0
+    fi
+    attempt=$((attempt + 1))
+    echo "Waiting for Synapse... (attempt $attempt/$max_attempts)"
+    sleep 2
+  done
+  
+  echo "WARNING: Synapse did not become ready within expected time"
+  return 1
+}
+
+# Function to create admin user if needed
+create_admin_user() {
+  if [[ -z "${MATRIX_ADMIN_USER}" || -z "${MATRIX_ADMIN_PASSWORD}" ]]; then
+    echo "MATRIX_ADMIN_USER and MATRIX_ADMIN_PASSWORD not set, skipping admin user creation"
+    return 0
+  fi
+  
+  echo "Checking if admin user ${MATRIX_ADMIN_USER} exists..."
+  
+  # Check if user already exists by trying to register (will fail if exists, which is fine)
+  local output
+  output=$(register_new_matrix_user -c /data/homeserver.yaml -u "${MATRIX_ADMIN_USER}" -p "${MATRIX_ADMIN_PASSWORD}" -a 2>&1)
+  local exit_code=$?
+  
+  if [ $exit_code -eq 0 ]; then
+    echo "Admin user ${MATRIX_ADMIN_USER} created successfully"
+    return 0
+  elif echo "$output" | grep -q "already registered"; then
+    echo "Admin user ${MATRIX_ADMIN_USER} already exists"
+    return 0
+  else
+    echo "WARNING: Failed to create admin user: $output"
+    return 1
+  fi
+}
 
 # Start Synapse
 echo "Starting Synapse..."
 echo "Server name: ${SYNAPSE_SERVER_NAME}"
 echo "Public base URL: ${SYNAPSE_PUBLIC_BASEURL}"
 echo "Database host: ${POSTGRES_HOST}"
-echo "Starting Synapse server..."
 
-# Start Synapse in foreground
-exec python -m synapse.app.homeserver --config-path /data/homeserver.yaml
+# Start Synapse in background
+python -m synapse.app.homeserver --config-path /data/homeserver.yaml &
+SYNAPSE_PID=$!
+
+# Set up signal handlers to forward to Synapse
+trap "kill -TERM $SYNAPSE_PID" SIGTERM
+trap "kill -INT $SYNAPSE_PID" SIGINT
+
+# Wait for Synapse to be ready
+wait_for_synapse
+
+# Create admin user if configured
+create_admin_user
+
+# Wait for Synapse process (this will keep the container running)
+wait $SYNAPSE_PID
 
