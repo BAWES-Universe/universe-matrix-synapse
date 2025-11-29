@@ -120,14 +120,10 @@ chmod -R 755 /data
 # Database migrations are handled automatically by Synapse on startup
 # No need to run them separately
 
-# Create admin user if provided
-if [[ -n "${MATRIX_ADMIN_USER}" ]] && [[ -n "${MATRIX_ADMIN_PASSWORD}" ]]; then
-  echo "Creating admin user..."
-  register_new_matrix_user -c /data/homeserver.yaml \
-    -u "${MATRIX_ADMIN_USER}" \
-    -p "${MATRIX_ADMIN_PASSWORD}" \
-    -a || echo "Admin user may already exist, skipping..."
-fi
+# Note: Admin user creation is skipped during startup because Synapse must be running first
+# To create an admin user after Synapse starts, run:
+#   register_new_matrix_user -c /data/homeserver.yaml -u <username> -p <password> -a
+# Or use the admin API once Synapse is running
 
 # Start Synapse
 echo "Starting Synapse..."
