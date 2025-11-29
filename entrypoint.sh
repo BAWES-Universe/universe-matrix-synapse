@@ -37,6 +37,9 @@ if [[ ${#MISSING_VARS[@]} -ne 0 ]]; then
   exit 1
 fi
 
+# Set default for POSTGRES_PORT if not provided
+export POSTGRES_PORT=${POSTGRES_PORT:-5432}
+
 # Generate homeserver.yaml from template
 echo "Generating homeserver.yaml from template..."
 envsubst < /data/homeserver.yaml.template > /data/homeserver.yaml

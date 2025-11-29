@@ -30,7 +30,7 @@ database:
     user: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     host: ${POSTGRES_HOST}
-    port: ${POSTGRES_PORT:-5432}
+    port: ${POSTGRES_PORT}
     database: ${POSTGRES_DATABASE}
     cp_min: 5
     cp_max: 10
