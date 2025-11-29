@@ -21,8 +21,9 @@ WORKDIR /data
 EXPOSE 8008
 
 # Health check for Railway
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8008/_matrix/client/versions')" || exit 1
+# Using /health endpoint which is simpler and more reliable
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8008/health')" || exit 1
 
 # Use custom entrypoint
 ENTRYPOINT ["/entrypoint.sh"]

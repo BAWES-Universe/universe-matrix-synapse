@@ -8,7 +8,7 @@
     "startCommand": "/entrypoint.sh",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
-    "healthcheckPath": "/_matrix/client/versions",
+    "healthcheckPath": "/health",
     "healthcheckTimeout": 300,
     "healthcheckInterval": 30
   }
