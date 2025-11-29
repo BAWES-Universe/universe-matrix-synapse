@@ -40,7 +40,7 @@ log_config: "/data/${SYNAPSE_SERVER_NAME}.log.config"
 # S3 media storage configuration
 # Media files are stored in S3 instead of local filesystem for better scalability
 media_storage_providers:
-  - module: s3_storage_provider.S3StorageProvider
+  - module: s3_storage_provider.StorageProvider
     store_local: true
     store_remote: true
     store_synchronous: true
