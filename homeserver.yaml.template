@@ -142,7 +142,7 @@ rc_media:
 limit_remote_rooms:
   enabled: true
   complexity: 1.0
-  complexity_error: 0.5
+  complexity_error: "Your homeserver is unable to join rooms this large or complex. Please speak to your server administrator, or upgrade your instance to join this room."
 
 # Enable metrics for monitoring
 enable_metrics: true
