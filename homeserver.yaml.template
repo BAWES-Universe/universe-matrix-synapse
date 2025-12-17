@@ -100,6 +100,7 @@ sso:
     - http://pusher.workadventure.localhost/
     - http://play.workadventure.localhost/
     - https://pusher.bawes.net/
+    - https://universe.bawes.net/
     - https://play.bawes.net/
 
 # Production security settings - no guest access, no public registration
