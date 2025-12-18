@@ -146,24 +146,24 @@ create_admin_user() {
     echo "MATRIX_ADMIN_USER and MATRIX_ADMIN_PASSWORD not set, skipping admin user creation"
     return 0
   fi
-  
+
   echo "Checking if admin user ${MATRIX_ADMIN_USER} exists..."
-  
-  # Check if user already exists by trying to register (will fail if exists, which is fine)
-  local output
-  output=$(register_new_matrix_user -c /data/homeserver.yaml -u "${MATRIX_ADMIN_USER}" -p "${MATRIX_ADMIN_PASSWORD}" -a 2>&1)
-  local exit_code=$?
-  
-  if [ $exit_code -eq 0 ]; then
+
+  # Try to create the user; run in an if so set -e doesn't kill the script on failure
+  if output=$(register_new_matrix_user -c /data/homeserver.yaml -u "${MATRIX_ADMIN_USER}" -p "${MATRIX_ADMIN_PASSWORD}" -a 2>&1); then
     echo "Admin user ${MATRIX_ADMIN_USER} created successfully"
     return 0
-  elif echo "$output" | grep -q "already registered"; then
+  fi
+
+  # User already exists (different Synapse versions use different messages)
+  if echo "$output" | grep -qiE "already registered|User ID already taken"; then
     echo "Admin user ${MATRIX_ADMIN_USER} already exists"
     return 0
-  else
-    echo "WARNING: Failed to create admin user: $output"
-    return 1
   fi
+
+  # Any other error: log but do not fail the container
+  echo "WARNING: Failed to create admin user: $output"
+  return 0
 }
 
 # Start Synapse
