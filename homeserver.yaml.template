@@ -47,7 +47,7 @@ log_config: "/data/${SYNAPSE_SERVER_NAME}.log.config"
 media_store_path: /data/media_store
 
 media_storage_providers:
-  - module: s3_storage_provider.StorageProvider
+  - module: s3_storage_provider.S3StorageProviderBackend
     store_local: true
     store_remote: true
     store_synchronous: true
