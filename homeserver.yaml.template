@@ -41,23 +41,22 @@ database:
 log_config: "/data/${SYNAPSE_SERVER_NAME}.log.config"
 
 # S3 media storage configuration
-# Media files are stored in S3 instead of local filesystem for better scalability
-# Note: Temporarily using local storage until S3 provider is properly configured
-# Uncomment and configure S3 storage below when ready
+# Media files are stored in S3 (Cloudflare R2) instead of local filesystem
+# for better scalability and to keep the server disk lean.
+# Local media_store_path remains as cache; R2 is the durable store.
 media_store_path: /data/media_store
 
-# S3 storage configuration (commented out - needs proper module path)
-# media_storage_providers:
-#   - module: s3_storage_provider.StorageProvider
-#     store_local: true
-#     store_remote: true
-#     store_synchronous: true
-#     config:
-#       bucket: ${S3_BUCKET_NAME}
-#       region_name: ${S3_REGION}
-#       access_key_id: ${S3_ACCESS_KEY_ID}
-#       secret_access_key: ${S3_SECRET_ACCESS_KEY}
-#       endpoint_url: ${S3_ENDPOINT_URL}
+media_storage_providers:
+  - module: s3_storage_provider.StorageProvider
+    store_local: true
+    store_remote: true
+    store_synchronous: true
+    config:
+      bucket: ${S3_BUCKET_NAME}
+      region_name: ${S3_REGION}
+      access_key_id: ${S3_ACCESS_KEY_ID}
+      secret_access_key: ${S3_SECRET_ACCESS_KEY}
+      endpoint_url: ${S3_ENDPOINT_URL}
 
 report_stats: true
 
