@@ -146,10 +146,13 @@ check "entrypoint loads it before the permissions step (which skips the token fi
 # The entrypoint's own permissions line, run on a copy of /data: everything opens up except the registration file
 d="$TMP/perm"; mkdir -p "$d/sub"; : > "$d/a.yaml"; : > "$d/sub/b"; : > "$d/appservice.yaml"
 chmod 600 "$d/a.yaml" "$d/sub/b" "$d/appservice.yaml"
+# a symbolic link in the data directory to a private file elsewhere: chmod would follow it and open up the target
+: > "$TMP/linked-target"; chmod 600 "$TMP/linked-target"; ln -s "$TMP/linked-target" "$d/link"
 permline=$(grep -m1 "^find /data " "$HERE/entrypoint.sh")
 check "entrypoint has a permissions line" '[[ -n "$permline" ]]'
 ( APPSERVICE_FILE="$d/appservice.yaml"; eval "${permline//\/data/$d}" )
 check "permissions step keeps the registration file at 600" '[[ "$(stat -c %a "$d/appservice.yaml")" == "600" ]]'
+check "permissions step leaves the target of a symbolic link alone" '[[ "$(stat -c %a "$TMP/linked-target")" == "600" ]]'
 check "permissions step still opens up the rest of the data directory" '[[ "$(stat -c %a "$d/a.yaml")" == "755" && "$(stat -c %a "$d/sub/b")" == "755" && "$(stat -c %a "$d")" == "755" ]]'
 check "entrypoint no longer runs a blanket chmod -R on /data" '! grep -q "^chmod -R 755 /data" "$HERE/entrypoint.sh"'
 

@@ -121,7 +121,7 @@ fi
 source /appservice.sh
 
 # Ensure proper permissions. The registration file holds tokens, so it keeps its own mode (600) and is never opened up here.
-find /data -path "$APPSERVICE_FILE" -prune -o -exec chmod 755 {} +
+find /data -path "$APPSERVICE_FILE" -prune -o -type l -prune -o -exec chmod 755 {} +
 
 # The `||` keeps a surprise here from stopping Synapse (set -e is off inside the function, which checks each step itself)
 configure_bot_appservice || echo "WARNING: Bot direct messages stay off (unexpected error while preparing them)"
