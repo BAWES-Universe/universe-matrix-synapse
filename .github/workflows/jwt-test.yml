@@ -15,8 +15,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Shell syntax and lint
         run: |
-          bash -n jwt.sh entrypoint.sh tests/jwt_test.sh tests/image_check.sh
-          shellcheck -x -e SC1091 jwt.sh tests/jwt_test.sh tests/image_check.sh
+          bash -n jwt.sh entrypoint.sh tests/jwt_test.sh tests/image_check.sh tests/start_check.sh
+          shellcheck -x -e SC1091 jwt.sh tests/jwt_test.sh tests/image_check.sh tests/start_check.sh
       - name: JWT config tests
         run: |
           sudo apt-get install -y gettext-base
@@ -32,3 +32,17 @@ jobs:
         run: docker build -t universe-matrix-synapse:test .
       - name: Render the config inside the image
         run: bash tests/image_check.sh universe-matrix-synapse:test
+
+  start:
+    # Starts the built image for real, as prod (an older template in /data) and a fresh install (empty /data) start it.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build the image
+        run: docker build -t universe-matrix-synapse:test .
+      - name: Start it on an empty /data and on a /data with the template prod has today
+        run: |
+          git show d2f17b5:homeserver.yaml.template > "$RUNNER_TEMP/old.template"
+          bash tests/start_check.sh universe-matrix-synapse:test "$RUNNER_TEMP/old.template"

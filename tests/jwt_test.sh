@@ -72,6 +72,7 @@ check "block cannot be taken out: refused" '[[ $rc -ne 0 ]]'
 # 8. The shipped template never holds the text envsubst cannot fill
 check "template has no \${NAME:-default} form" '! grep -q "\${[A-Za-z_]*:" "$TEMPLATE"'
 check "entrypoint runs every step and stops when one fails" 'grep -q "prepare_jwt_secret || exit 1" "$HERE/entrypoint.sh" && grep -q "apply_jwt_config /data/homeserver.yaml || exit 1" "$HERE/entrypoint.sh" && grep -q "reject_unrendered /data/homeserver.yaml || exit 1" "$HERE/entrypoint.sh"'
+check "entrypoint and image use a template path outside /data" 'grep -q "^envsubst < /opt/synapse/homeserver.yaml.template > /data/homeserver.yaml" "$HERE/entrypoint.sh" && grep -q "^COPY homeserver.yaml.template /opt/synapse/homeserver.yaml.template" "$HERE/Dockerfile" && ! grep -q "/data/homeserver.yaml.template" "$HERE/entrypoint.sh" "$HERE/Dockerfile"'
 check "image copies jwt.sh" 'grep -q "COPY jwt.sh /jwt.sh" "$HERE/Dockerfile"'
 
 echo
