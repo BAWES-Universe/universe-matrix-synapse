@@ -12,7 +12,8 @@ RUN mkdir -p /data
 # Copy configuration template and entrypoint script
 COPY homeserver.yaml.template /data/homeserver.yaml.template
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY jwt.sh /jwt.sh
+RUN chmod +x /entrypoint.sh /jwt.sh
 
 # Set working directory
 WORKDIR /data
