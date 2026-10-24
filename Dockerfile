@@ -6,7 +6,7 @@ FROM matrixdotorg/synapse:v1.160.0
 RUN apt-get update && apt-get install -y gettext-base && rm -rf /var/lib/apt/lists/*
 
 # Install S3 storage provider for Synapse
-RUN pip install --no-cache-dir synapse-s3-storage-provider
+RUN pip install --no-cache-dir synapse-s3-storage-provider==1.7.0
 
 # Create data directory
 RUN mkdir -p /data

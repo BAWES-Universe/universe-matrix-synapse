@@ -116,7 +116,8 @@ chmod -R 755 /data
 
 # Bot direct messages (optional, from BOT_APPSERVICE_* variables). After the chmod, because the file holds tokens.
 source /appservice.sh
-configure_bot_appservice
+# The `||` keeps a surprise here from stopping Synapse (set -e is off inside the function, which checks each step itself)
+configure_bot_appservice || echo "WARNING: Bot direct messages stay off (unexpected error while preparing them)"
 
 # Note: Database migrations are handled automatically by Synapse on startup
 # Synapse will wait for the database and run migrations as needed

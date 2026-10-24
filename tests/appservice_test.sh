@@ -98,13 +98,56 @@ printf 'server_name: "chat.example.net"\napp_service_config_files:\n  - /data/ot
 out=$(run_case "$d" "${ENV_OK[@]}")
 check "existing key: warns and stays off" '[[ "$out" == *"already sets app_service_config_files"* ]]'
 check "existing key: left as it was" '[[ "$(grep -c "^app_service_config_files:" "$d/homeserver.yaml")" == "1" && ! -e "$d/appservice.yaml" ]]'
+# ...and a registration file from an earlier run is not deleted by that branch
+printf 'earlier run\n' > "$d/appservice.yaml"
+out=$(run_case "$d" "${ENV_OK[@]}")
+check "existing key: an earlier registration file is left alone" '[[ "$(cat "$d/appservice.yaml")" == "earlier run" ]]'
+
+# 7b. A config that is NOT regenerated at every start (a plain-image Synapse) already lists our file. Deleting the
+# file would leave Synapse unable to start, so it stays whenever homeserver.yaml points at it.
+d="$TMP/static"; mkdir -p "$d"
+run_case "$d" "${ENV_OK[@]}" > /dev/null
+before=$(cat "$d/homeserver.yaml")
+out=$(run_case "$d" SYNAPSE_SERVER_NAME=chat.example.net)
+check "static config, variables unset: file stays while the config points at it" '[[ -s "$d/appservice.yaml" && "$(cat "$d/homeserver.yaml")" == "$before" ]]'
+out=$(run_case "$d" SYNAPSE_SERVER_NAME=chat.example.net BOT_APPSERVICE_URL=nonsense)
+check "static config, invalid variables: file stays while the config points at it" '[[ -s "$d/appservice.yaml" && "$out" == *"WARNING"* ]]'
+out=$(run_case "$d" "${ENV_OK[@]}")
+check "static config, run again: warns, file and config unchanged" '[[ -s "$d/appservice.yaml" && "$out" == *"already sets"* && "$(cat "$d/homeserver.yaml")" == "$before" ]]'
+check "static config: every path in homeserver.yaml still exists" 'for f in $(sed -n "s/^  - //p" "$d/homeserver.yaml"); do [[ -s "$f" ]] || exit 1; done'
+
+# 7c. A file that cannot be written must never stop Synapse. Runs the way entrypoint.sh does (set -e and `||`).
+entry_style() { # dir [VAR=value ...] (APPSERVICE_FILE and HOMESERVER_FILE come from the caller)
+  local dir="$1"; shift
+  env -i PATH="${FAKEBIN:+$FAKEBIN:}$PATH" APPSERVICE_FILE="${AS_FILE:-$dir/appservice.yaml}" HOMESERVER_FILE="$dir/homeserver.yaml" "$@" \
+    bash -c "set -e; source '$SCRIPT'; configure_bot_appservice || echo UNEXPECTED-ERROR; echo STILL-ALIVE"
+}
+d="$TMP/ioerr"; mkdir -p "$d"
+printf 'server_name: "chat.example.net"\n' > "$d/homeserver.yaml"
+: > "$d/notadir"
+out=$(AS_FILE="$d/notadir/appservice.yaml" entry_style "$d" "${ENV_OK[@]}"); rc=$?
+check "cannot write the file: Synapse would still start" '[[ "$rc" == "0" && "$out" == *"STILL-ALIVE"* ]]'
+check "cannot write the file: warns and stays off" '[[ "$out" == *"WARNING: Bot direct messages stay off: cannot write"* ]]'
+check "cannot write the file: homeserver.yaml untouched" '[[ "$(cat "$d/homeserver.yaml")" == "server_name: \"chat.example.net\"" ]]'
+
+d="$TMP/hserr"; mkdir -p "$d" "$TMP/fakebin"
+printf 'server_name: "chat.example.net"\n' > "$d/homeserver.yaml"
+printf '#!/bin/bash\nfor a; do last="$a"; done\n[[ "$last" == *homeserver.yaml ]] && exit 1\nexec /bin/mv "$@"\n' > "$TMP/fakebin/mv"; chmod +x "$TMP/fakebin/mv"
+out=$(FAKEBIN="$TMP/fakebin" entry_style "$d" "${ENV_OK[@]}"); rc=$?
+check "cannot update homeserver.yaml: Synapse would still start" '[[ "$rc" == "0" && "$out" == *"STILL-ALIVE"* ]]'
+check "cannot update homeserver.yaml: warns and stays off" '[[ "$out" == *"cannot update"* ]]'
+check "cannot update homeserver.yaml: no line, and no file left behind" '! grep -q app_service_config_files "$d/homeserver.yaml" && [[ ! -e "$d/appservice.yaml" ]]'
+check "cannot update homeserver.yaml: no temporary files left" '[[ -z "$(ls -A "$d" | grep -v -x -e homeserver.yaml)" ]]'
 
 # 8. The wiring: the image copies the file and the entrypoint runs it after the permissions change
 check "Dockerfile copies appservice.sh" 'grep -q "COPY appservice.sh /appservice.sh" "$HERE/Dockerfile"'
-check "entrypoint runs it after chmod" '[[ "$(grep -n "chmod -R 755 /data" "$HERE/entrypoint.sh" | head -1 | cut -d: -f1)" -lt "$(grep -n "configure_bot_appservice$" "$HERE/entrypoint.sh" | head -1 | cut -d: -f1)" ]]'
+check "entrypoint runs it after chmod" '[[ "$(grep -n "chmod -R 755 /data" "$HERE/entrypoint.sh" | head -1 | cut -d: -f1)" -lt "$(grep -n "^configure_bot_appservice ||" "$HERE/entrypoint.sh" | head -1 | cut -d: -f1)" ]]'
+
+check "entrypoint cannot be stopped by it (the call is guarded with ||)" 'grep -q "^configure_bot_appservice || echo " "$HERE/entrypoint.sh"'
 
 # 9. The base image is pinned to an exact version, so a rebuild never upgrades Synapse by accident
 check "Dockerfile pins the Synapse base image to an exact version" 'grep -Eq "^FROM matrixdotorg/synapse:v[0-9]+\.[0-9]+\.[0-9]+$" "$HERE/Dockerfile"'
+check "Dockerfile pins the S3 storage provider to an exact version" 'grep -Eq "synapse-s3-storage-provider==[0-9]+\.[0-9]+\.[0-9]+" "$HERE/Dockerfile"'
 
 echo
 echo "$CASES checks, $FAILED failed"

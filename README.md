@@ -242,12 +242,13 @@ Make the tokens fresh for each environment, for example `openssl rand -hex 32`, 
 
 What happens:
 
-- None of the three set: bot direct messages are off. Nothing is written, and a registration file left by an earlier start is removed.
+- None of the three set: bot direct messages are off. Nothing is written, and a registration file left by an earlier start is removed (unless `homeserver.yaml` still points at it, then it stays so Synapse can start).
 - All three set and valid: `/data/appservice-universe-bots.yaml` is written (mode 600) and `homeserver.yaml` lists it. Only accounts named `@bot_<id>:<SYNAPSE_SERVER_NAME>` belong to the bot server.
-- Some missing or not valid (a short token, equal tokens, a URL with a path): a warning is printed (never the values), bot direct messages stay off, and Synapse starts as usual.
+- Some missing or not valid (a short token, equal tokens, a URL with a path), or a file that cannot be written: a warning is printed (never the values), bot direct messages stay off, and Synapse starts as usual. The `homeserver.yaml` line is only added once the registration file exists, and the file is replaced in one step, so Synapse never sees a line that names a missing file.
+- `homeserver.yaml` already has its own `app_service_config_files`: a warning, and nothing is touched.
 
 To undo it: remove the three variables from the Synapse service and redeploy. People and rooms are not touched; bot accounts that were created stay as ordinary accounts that nobody uses.
 
-The Synapse base image is pinned (`Dockerfile`, `FROM matrixdotorg/synapse:v1.160.0`, the version prod runs), so adding or changing a variable and redeploying never upgrades Synapse by accident. To upgrade, change that tag on purpose after reading the Synapse release notes.
+The Synapse base image is pinned (`Dockerfile`, `FROM matrixdotorg/synapse:v1.160.0`, the version prod runs), so adding or changing a variable and redeploying never upgrades Synapse by accident. `synapse-s3-storage-provider` is pinned to `1.7.0` for the same reason. To upgrade, change that tag on purpose after reading the Synapse release notes.
 
 Tests: `bash tests/appservice_test.sh` (also run in CI, outside and inside the built image).
