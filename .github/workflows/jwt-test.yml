@@ -1,0 +1,23 @@
+name: JWT config test
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  jwt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell syntax and lint
+        run: |
+          bash -n jwt.sh entrypoint.sh tests/jwt_test.sh
+          shellcheck -x -e SC1091 jwt.sh tests/jwt_test.sh
+      - name: JWT config tests
+        run: |
+          sudo apt-get install -y gettext-base
+          bash tests/jwt_test.sh

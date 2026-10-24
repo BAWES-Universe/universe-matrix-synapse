@@ -70,10 +70,10 @@ trusted_key_servers:
   - server_name: "matrix.org"
 suppress_key_server_warning: true
 
-# JWT configuration (if needed for WorkAdventure)
+# JWT configuration (for WorkAdventure). Left out of the generated file when JWT_SECRET is not set (see jwt.sh).
 jwt_config:
   enabled: true
-  secret: "${JWT_SECRET:-}"
+  secret: "${JWT_SECRET}"
   algorithm: "HS256"
   subject_claim: "matrixUserId"
 

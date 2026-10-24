@@ -47,6 +47,11 @@ export POSTGRES_PORT=${POSTGRES_PORT:-5432}
 echo "Generating homeserver.yaml from template..."
 envsubst < /data/homeserver.yaml.template > /data/homeserver.yaml
 
+# The JWT sign-in is on only with a secret, and no placeholder text may be left in the generated file
+source /jwt.sh
+apply_jwt_config /data/homeserver.yaml
+reject_unrendered /data/homeserver.yaml || exit 1
+
 # Verify the generated config is valid
 if [[ ! -f /data/homeserver.yaml ]]; then
   echo "ERROR: Failed to generate homeserver.yaml"
