@@ -1,4 +1,6 @@
-FROM matrixdotorg/synapse:latest
+# Pinned to the version prod runs: a rebuild (new variable, redeploy) must not also upgrade Synapse.
+# Upgrade on purpose by changing this tag, after reading the Synapse release notes.
+FROM matrixdotorg/synapse:v1.160.0
 
 # Install gettext-base for envsubst and pip for S3 storage provider
 RUN apt-get update && apt-get install -y gettext-base && rm -rf /var/lib/apt/lists/*

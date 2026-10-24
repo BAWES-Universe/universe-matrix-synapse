@@ -248,4 +248,6 @@ What happens:
 
 To undo it: remove the three variables from the Synapse service and redeploy. People and rooms are not touched; bot accounts that were created stay as ordinary accounts that nobody uses.
 
+The Synapse base image is pinned (`Dockerfile`, `FROM matrixdotorg/synapse:v1.160.0`, the version prod runs), so adding or changing a variable and redeploying never upgrades Synapse by accident. To upgrade, change that tag on purpose after reading the Synapse release notes.
+
 Tests: `bash tests/appservice_test.sh` (also run in CI, outside and inside the built image).

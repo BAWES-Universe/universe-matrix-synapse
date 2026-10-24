@@ -103,6 +103,9 @@ check "existing key: left as it was" '[[ "$(grep -c "^app_service_config_files:"
 check "Dockerfile copies appservice.sh" 'grep -q "COPY appservice.sh /appservice.sh" "$HERE/Dockerfile"'
 check "entrypoint runs it after chmod" '[[ "$(grep -n "chmod -R 755 /data" "$HERE/entrypoint.sh" | head -1 | cut -d: -f1)" -lt "$(grep -n "configure_bot_appservice$" "$HERE/entrypoint.sh" | head -1 | cut -d: -f1)" ]]'
 
+# 9. The base image is pinned to an exact version, so a rebuild never upgrades Synapse by accident
+check "Dockerfile pins the Synapse base image to an exact version" 'grep -Eq "^FROM matrixdotorg/synapse:v[0-9]+\.[0-9]+\.[0-9]+$" "$HERE/Dockerfile"'
+
 echo
 echo "$CASES checks, $FAILED failed"
 [[ "$FAILED" == "0" ]]
