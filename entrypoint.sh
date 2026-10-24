@@ -114,6 +114,10 @@ fi
 # Ensure proper permissions
 chmod -R 755 /data
 
+# Bot direct messages (optional, from BOT_APPSERVICE_* variables). After the chmod, because the file holds tokens.
+source /appservice.sh
+configure_bot_appservice
+
 # Note: Database migrations are handled automatically by Synapse on startup
 # Synapse will wait for the database and run migrations as needed
 
