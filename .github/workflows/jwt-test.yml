@@ -1,0 +1,34 @@
+name: JWT config test
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  jwt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell syntax and lint
+        run: |
+          bash -n jwt.sh entrypoint.sh tests/jwt_test.sh tests/image_check.sh
+          shellcheck -x -e SC1091 jwt.sh tests/jwt_test.sh tests/image_check.sh
+      - name: JWT config tests
+        run: |
+          sudo apt-get install -y gettext-base
+          pip install pyyaml
+          bash tests/jwt_test.sh
+
+  image:
+    # The config steps run inside the image that ships, so the files copied into it are the files tested.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t universe-matrix-synapse:test .
+      - name: Render the config inside the image
+        run: bash tests/image_check.sh universe-matrix-synapse:test

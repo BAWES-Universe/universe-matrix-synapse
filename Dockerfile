@@ -15,7 +15,8 @@ RUN mkdir -p /data
 COPY homeserver.yaml.template /data/homeserver.yaml.template
 COPY entrypoint.sh /entrypoint.sh
 COPY appservice.sh /appservice.sh
-RUN chmod +x /entrypoint.sh /appservice.sh
+COPY jwt.sh /jwt.sh
+RUN chmod +x /entrypoint.sh /appservice.sh /jwt.sh
 
 # Set working directory
 WORKDIR /data

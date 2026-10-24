@@ -75,7 +75,7 @@ openssl rand -base64 32  # For SYNAPSE_FORM_SECRET
 - `S3_ENDPOINT_URL` - **Required for Railway buckets** - Endpoint URL from Railway bucket credentials
 
 **Optional:**
-- `JWT_SECRET` - JWT secret for WorkAdventure integration (if needed)
+- `JWT_SECRET` - JWT secret for the WorkAdventure sign-in. The JWT sign-in is on only when this is set; without it the setting is left out of the generated config.
 - `MATRIX_ADMIN_USER` - Admin username (only used on first run)
 - `MATRIX_ADMIN_PASSWORD` - Admin password (only used on first run)
 
