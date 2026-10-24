@@ -14,7 +14,7 @@ expect() { if [[ $1 -eq 0 ]]; then pass "$2"; else fail "$2"; fi; }
 WORK=$(mktemp -d)
 PUBLIC_TEXT='${JWT_SECRET:-}'
 
-# shellcheck disable=SC2329  # runs from the trap
+# shellcheck disable=SC2317,SC2329  # runs from the trap
 stop_all() { docker rm -f synapse-start-check pg-start-check >/dev/null 2>&1; }
 trap 'stop_all; sudo rm -rf "$WORK" 2>/dev/null || rm -rf "$WORK"' EXIT
 
