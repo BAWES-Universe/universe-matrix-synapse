@@ -228,3 +228,27 @@ Make sure to set all environment variables in a `.env` file (see `.env.example`)
 
 This configuration is provided as-is for production use.
 
+## Bot direct messages (optional)
+
+Universe bots can be messaged directly in chat. Synapse needs to know the bot server (a Matrix "application service"), and the bot server needs the same two tokens. Everything is set with variables, so a restart, a redeploy and a new install give the same result and no file is edited by hand. The registration is built at start by `appservice.sh` from these three variables on the **Synapse** service:
+
+- `BOT_APPSERVICE_URL` - where Synapse reaches the bot server, for example `http://bot-server:3001` (no path).
+- `BOT_APPSERVICE_AS_TOKEN` - at least 32 letters, digits or `. _ ~ -`. Set the same value as `MATRIX_AS_TOKEN` on the bot server.
+- `BOT_APPSERVICE_HS_TOKEN` - the same kind of value, different from the one above. Set the same value as `MATRIX_HS_TOKEN` on the bot server.
+
+The bot server also needs `MATRIX_HOMESERVER_URL` (how it reaches this Synapse), `MATRIX_DOMAIN` (the same value as `SYNAPSE_SERVER_NAME`) and the two tokens.
+
+Make the tokens fresh for each environment, for example `openssl rand -hex 32`, and never reuse one between dev and prod.
+
+What happens:
+
+- None of the three set: bot direct messages are off. Nothing is written, and a registration file left by an earlier start is removed (unless `homeserver.yaml` still points at it, then it stays so Synapse can start).
+- All three set and valid: `/data/appservice-universe-bots.yaml` is written (mode 600) and `homeserver.yaml` lists it. Only accounts named `@bot_<id>:<SYNAPSE_SERVER_NAME>` belong to the bot server.
+- Some missing or not valid (a short token, equal tokens, a URL with a path), or a file that cannot be written: a warning is printed (never the values), bot direct messages stay off, and Synapse starts as usual. The `homeserver.yaml` line is only added once the registration file exists, and the file is replaced in one step, so Synapse never sees a line that names a missing file.
+- `homeserver.yaml` already has its own `app_service_config_files`: a warning, and nothing is touched.
+
+To undo it: remove the three variables from the Synapse service and redeploy. People and rooms are not touched; bot accounts that were created stay as ordinary accounts that nobody uses.
+
+The Synapse base image is pinned (`Dockerfile`, `FROM matrixdotorg/synapse:v1.160.0`, the version prod runs), so adding or changing a variable and redeploying never upgrades Synapse by accident. `synapse-s3-storage-provider` is pinned to `1.7.0` for the same reason. To upgrade, change that tag on purpose after reading the Synapse release notes.
+
+Tests: `bash tests/appservice_test.sh` (also run in CI, outside and inside the built image).

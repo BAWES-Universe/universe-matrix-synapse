@@ -1,3 +1,5 @@
+# Pinned to the version prod runs: a rebuild (new variable, redeploy) must not also upgrade Synapse.
+# Upgrade on purpose by changing this tag, after reading the Synapse release notes.
 FROM matrixdotorg/synapse:v1.160.0
 
 # Install gettext-base for envsubst and pip for S3 storage provider
@@ -13,8 +15,9 @@ RUN mkdir -p /data
 # The template lives outside /data: on prod /data is a mounted volume that hides anything the image puts there
 COPY homeserver.yaml.template /opt/synapse/homeserver.yaml.template
 COPY entrypoint.sh /entrypoint.sh
+COPY appservice.sh /appservice.sh
 COPY jwt.sh /jwt.sh
-RUN chmod +x /entrypoint.sh /jwt.sh
+RUN chmod +x /entrypoint.sh /appservice.sh /jwt.sh
 
 # Set working directory
 WORKDIR /data

@@ -92,6 +92,20 @@ start_synapse "$prod" -e "JWT_SECRET=$REAL_SECRET"; expect $? "restart: Synapse 
 grep -c '^jwt_config:' "$prod/homeserver.yaml" | grep -qx 1; expect $? "restart: still exactly one jwt_config block"
 code=$(jwt_login_status "$REAL_SECRET"); same "$code" 200; expect $? "restart: the real secret still signs in"
 
+echo "== 3b. bot direct messages on (the three BOT_APPSERVICE variables), on the same /data"
+start_synapse "$prod" -e "JWT_SECRET=$REAL_SECRET" -e BOT_APPSERVICE_URL=http://127.0.0.1:9 \
+  -e BOT_APPSERVICE_AS_TOKEN=as-token-for-the-start-check-0123456789 -e BOT_APPSERVICE_HS_TOKEN=hs-token-for-the-start-check-9876543210
+expect $? "bot direct messages on: Synapse starts"
+grep -c '^app_service_config_files:' "$prod/homeserver.yaml" | grep -qx 1; expect $? "bot direct messages on: exactly one app_service_config_files line"
+mode=$(stat -c %a "$prod/appservice-universe-bots.yaml" 2>/dev/null); same "$mode" 600; expect $? "bot direct messages on: the registration file is mode 600"
+docker logs synapse-start-check 2>&1 | grep -q 'Bot direct messages: on'; expect $? "bot direct messages on: the log says so"
+grep -c '^jwt_config:' "$prod/homeserver.yaml" | grep -qx 1; expect $? "bot direct messages on: JWT config is still exactly one block"
+
+echo "== 3c. the variables removed again: back to off, nothing left behind"
+start_synapse "$prod" -e "JWT_SECRET=$REAL_SECRET"; expect $? "bot direct messages off again: Synapse starts"
+! grep -q '^app_service_config_files:' "$prod/homeserver.yaml"; expect $? "bot direct messages off again: no app_service_config_files line"
+! test -e "$prod/appservice-universe-bots.yaml"; expect $? "bot direct messages off again: the registration file is removed"
+
 echo "== 4. a secret with a line break stops the start before Synapse runs"
 docker rm -f synapse-start-check >/dev/null 2>&1
 docker run --name synapse-start-check --network host -v "$fresh:/data" \

@@ -1,0 +1,35 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  appservice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shell syntax and lint
+        run: |
+          bash -n appservice.sh entrypoint.sh tests/appservice_test.sh
+          shellcheck -x -e SC1091 appservice.sh tests/appservice_test.sh
+      - name: Bot direct messages tests
+        run: |
+          pip install pyyaml
+          bash tests/appservice_test.sh
+
+  image:
+    # The same tests, run inside the image that ships, so the file that is copied into it is the file that is tested.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t universe-matrix-synapse:test .
+      - name: Run the tests inside the image
+        run: |
+          docker run --rm --entrypoint bash -v "$PWD":/repo:ro -e APPSERVICE_SH=/appservice.sh \
+            universe-matrix-synapse:test -c 'cd /repo && bash tests/appservice_test.sh'
