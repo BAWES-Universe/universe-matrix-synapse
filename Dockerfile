@@ -12,7 +12,8 @@ RUN pip install --no-cache-dir synapse-s3-storage-provider==1.7.0
 RUN mkdir -p /data
 
 # Copy configuration template and entrypoint script
-COPY homeserver.yaml.template /data/homeserver.yaml.template
+# The template lives outside /data: on prod /data is a mounted volume that hides anything the image puts there
+COPY homeserver.yaml.template /opt/synapse/homeserver.yaml.template
 COPY entrypoint.sh /entrypoint.sh
 COPY appservice.sh /appservice.sh
 COPY jwt.sh /jwt.sh
