@@ -141,7 +141,17 @@ check "cannot update homeserver.yaml: no temporary files left" '[[ -z "$(ls -A "
 
 # 8. The wiring: the image copies the file and the entrypoint runs it after the permissions change
 check "Dockerfile copies appservice.sh" 'grep -q "COPY appservice.sh /appservice.sh" "$HERE/Dockerfile"'
-check "entrypoint runs it after chmod" '[[ "$(grep -n "chmod -R 755 /data" "$HERE/entrypoint.sh" | head -1 | cut -d: -f1)" -lt "$(grep -n "^configure_bot_appservice ||" "$HERE/entrypoint.sh" | head -1 | cut -d: -f1)" ]]'
+check "entrypoint loads it before the permissions step (which skips the token file)" '[[ "$(grep -n "^source /appservice.sh" "$HERE/entrypoint.sh" | head -1 | cut -d: -f1)" -lt "$(grep -n "^find /data " "$HERE/entrypoint.sh" | head -1 | cut -d: -f1)" ]]'
+
+# The entrypoint's own permissions line, run on a copy of /data: everything opens up except the registration file
+d="$TMP/perm"; mkdir -p "$d/sub"; : > "$d/a.yaml"; : > "$d/sub/b"; : > "$d/appservice.yaml"
+chmod 600 "$d/a.yaml" "$d/sub/b" "$d/appservice.yaml"
+permline=$(grep -m1 "^find /data " "$HERE/entrypoint.sh")
+check "entrypoint has a permissions line" '[[ -n "$permline" ]]'
+( APPSERVICE_FILE="$d/appservice.yaml"; eval "${permline//\/data/$d}" )
+check "permissions step keeps the registration file at 600" '[[ "$(stat -c %a "$d/appservice.yaml")" == "600" ]]'
+check "permissions step still opens up the rest of the data directory" '[[ "$(stat -c %a "$d/a.yaml")" == "755" && "$(stat -c %a "$d/sub/b")" == "755" && "$(stat -c %a "$d")" == "755" ]]'
+check "entrypoint no longer runs a blanket chmod -R on /data" '! grep -q "^chmod -R 755 /data" "$HERE/entrypoint.sh"'
 
 check "entrypoint cannot be stopped by it (the call is guarded with ||)" 'grep -q "^configure_bot_appservice || echo " "$HERE/entrypoint.sh"'
 

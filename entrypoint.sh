@@ -111,11 +111,12 @@ if [[ ! -f "$SIGNING_KEY" ]]; then
   }
 fi
 
-# Ensure proper permissions
-chmod -R 755 /data
-
-# Bot direct messages (optional, from BOT_APPSERVICE_* variables). After the chmod, because the file holds tokens.
+# Bot direct messages (optional, from BOT_APPSERVICE_* variables). Loaded first so the permissions step below can skip its file.
 source /appservice.sh
+
+# Ensure proper permissions. The registration file holds tokens, so it keeps its own mode (600) and is never opened up here.
+find /data -path "$APPSERVICE_FILE" -prune -o -exec chmod 755 {} +
+
 # The `||` keeps a surprise here from stopping Synapse (set -e is off inside the function, which checks each step itself)
 configure_bot_appservice || echo "WARNING: Bot direct messages stay off (unexpected error while preparing them)"
 
