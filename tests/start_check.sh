@@ -94,7 +94,7 @@ code=$(jwt_login_status "$REAL_SECRET"); same "$code" 200; expect $? "restart: t
 
 echo "== 3b. bot direct messages on (the three BOT_APPSERVICE variables), on the same /data"
 start_synapse "$prod" -e "JWT_SECRET=$REAL_SECRET" -e BOT_APPSERVICE_URL=http://127.0.0.1:9 \
-  -e BOT_APPSERVICE_AS_TOKEN=as-token-for-the-start-check -e BOT_APPSERVICE_HS_TOKEN=hs-token-for-the-start-check
+  -e BOT_APPSERVICE_AS_TOKEN=as-token-for-the-start-check-0123456789 -e BOT_APPSERVICE_HS_TOKEN=hs-token-for-the-start-check-9876543210
 expect $? "bot direct messages on: Synapse starts"
 grep -c '^app_service_config_files:' "$prod/homeserver.yaml" | grep -qx 1; expect $? "bot direct messages on: exactly one app_service_config_files line"
 mode=$(stat -c %a "$prod/appservice-universe-bots.yaml" 2>/dev/null); same "$mode" 600; expect $? "bot direct messages on: the registration file is mode 600"
