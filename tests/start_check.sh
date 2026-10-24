@@ -8,6 +8,7 @@ OLD_TEMPLATE="${2:-}"
 FAILED=0
 pass() { echo "ok   - $1"; }
 fail() { FAILED=$((FAILED + 1)); echo "FAIL - $1"; }
+same() { [[ "$1" == "$2" ]]; }
 expect() { if [[ $1 -eq 0 ]]; then pass "$2"; else fail "$2"; fi; }
 
 WORK=$(mktemp -d)
@@ -82,14 +83,14 @@ start_synapse "$prod" -e "JWT_SECRET=$REAL_SECRET"; expect $? "prod style: Synap
 ! grep -qF 'JWT_SECRET:-' "$prod/homeserver.yaml"; expect $? "prod style: the public secret text is gone from homeserver.yaml"
 grep -c '^jwt_config:' "$prod/homeserver.yaml" | grep -qx 1; expect $? "prod style: exactly one jwt_config block"
 grep -q 'org.matrix.login.jwt' <<<"$(flows)"; expect $? "prod style: JWT sign-in is on because a secret is set"
-code=$(jwt_login_status "$PUBLIC_TEXT"); [[ "$code" == "403" ]]; expect $? "prod style: a JWT signed with the public text is refused (403)"
-code=$(jwt_login_status "$REAL_SECRET"); [[ "$code" == "200" ]]; expect $? "prod style: a JWT signed with the real secret signs in (200)"
+code=$(jwt_login_status "$PUBLIC_TEXT"); same "$code" 403; expect $? "prod style: a JWT signed with the public text is refused (403)"
+code=$(jwt_login_status "$REAL_SECRET"); same "$code" 200; expect $? "prod style: a JWT signed with the real secret signs in (200)"
 f=$(flows); grep -q 'm.login.password' <<<"$f" && grep -q 'm.login.token' <<<"$f"; expect $? "prod style: password and token sign-in are unchanged ($f)"
 
 echo "== 3. restart on the same /data (a dev reset keeps /data, a redeploy restarts on it)"
 start_synapse "$prod" -e "JWT_SECRET=$REAL_SECRET"; expect $? "restart: Synapse starts again on the same /data"
 grep -c '^jwt_config:' "$prod/homeserver.yaml" | grep -qx 1; expect $? "restart: still exactly one jwt_config block"
-code=$(jwt_login_status "$REAL_SECRET"); [[ "$code" == "200" ]]; expect $? "restart: the real secret still signs in"
+code=$(jwt_login_status "$REAL_SECRET"); same "$code" 200; expect $? "restart: the real secret still signs in"
 
 echo "== 4. a secret with a line break stops the start before Synapse runs"
 docker rm -f synapse-start-check >/dev/null 2>&1
