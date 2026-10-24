@@ -20,7 +20,7 @@ render() {
     POSTGRES_HOST=db POSTGRES_USER=u POSTGRES_PASSWORD=p POSTGRES_DATABASE=d POSTGRES_PORT=5432 \
     SYNAPSE_REGISTRATION_SHARED_SECRET=r SYNAPSE_MACAROON_SECRET_KEY=m SYNAPSE_FORM_SECRET=f \
     AUTHENTIK_ISSUER=https://id.example.net AUTHENTIK_CLIENT_ID=c AUTHENTIK_CLIENT_SECRET=s "$@" \
-    envsubst < "$TEMPLATE" > "$out"
+    bash -c "source '$HERE/jwt.sh'; prepare_jwt_secret && envsubst < '$TEMPLATE'" > "$out"
 }
 # Runs both steps of the entrypoint on a rendered file
 finish() { env -i PATH="$PATH" "${@:2}" bash -c "source '$HERE/jwt.sh'; apply_jwt_config '$1' && reject_unrendered '$1'"; }
@@ -52,9 +52,26 @@ out=$(env -i PATH="$PATH" bash -c "source '$HERE/jwt.sh'; reject_unrendered '$TM
 check "placeholder text left: refused" '[[ $rc -ne 0 ]]'
 check "placeholder text left: says which line" '[[ "$out" == *"line(s) 2"* ]]'
 
-# 5. The shipped template never holds the text envsubst cannot fill
+# 5. A secret with a backslash, a quote or a dollar sign reaches Synapse as typed
+tricky="a\\nb\"c\$d\\\\"
+render "$TMP/tricky.yaml" "JWT_SECRET=$tricky"
+finish "$TMP/tricky.yaml" "JWT_SECRET=$tricky" >/dev/null
+got=$(python3 -c 'import sys, yaml; print(yaml.safe_load(open(sys.argv[1]))["jwt_config"]["secret"], end="")' "$TMP/tricky.yaml" 2>&1)
+check "tricky secret: the file reads back as the same secret" '[[ "$got" == "$tricky" ]]'
+
+# 6. A secret with a line break cannot be written and stops the start
+out=$(env -i PATH="$PATH" "JWT_SECRET=$(printf 'a\nb')" bash -c "source '$HERE/jwt.sh'; prepare_jwt_secret" 2>&1); rc=$?
+check "line break in the secret: refused" '[[ $rc -ne 0 ]]'
+
+# 7. If the block cannot be taken out, the start stops instead of leaving it on with an empty secret
+render "$TMP/stuck.yaml"
+mkdir "$TMP/stuck.yaml.tmp"
+env -i PATH="$PATH" bash -c "source '$HERE/jwt.sh'; apply_jwt_config '$TMP/stuck.yaml'" >/dev/null 2>&1; rc=$?
+check "block cannot be taken out: refused" '[[ $rc -ne 0 ]]'
+
+# 8. The shipped template never holds the text envsubst cannot fill
 check "template has no \${NAME:-default} form" '! grep -q "\${[A-Za-z_]*:" "$TEMPLATE"'
-check "entrypoint runs both steps after envsubst" 'grep -q "apply_jwt_config" "$HERE/entrypoint.sh" && grep -q "reject_unrendered" "$HERE/entrypoint.sh"'
+check "entrypoint runs every step and stops when one fails" 'grep -q "prepare_jwt_secret || exit 1" "$HERE/entrypoint.sh" && grep -q "apply_jwt_config /data/homeserver.yaml || exit 1" "$HERE/entrypoint.sh" && grep -q "reject_unrendered /data/homeserver.yaml || exit 1" "$HERE/entrypoint.sh"'
 check "image copies jwt.sh" 'grep -q "COPY jwt.sh /jwt.sh" "$HERE/Dockerfile"'
 
 echo

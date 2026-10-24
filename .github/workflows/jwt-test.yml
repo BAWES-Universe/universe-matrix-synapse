@@ -20,4 +20,5 @@ jobs:
       - name: JWT config tests
         run: |
           sudo apt-get install -y gettext-base
+          pip install pyyaml
           bash tests/jwt_test.sh

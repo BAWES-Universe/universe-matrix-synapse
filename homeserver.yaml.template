@@ -73,7 +73,7 @@ suppress_key_server_warning: true
 # JWT configuration (for WorkAdventure). Left out of the generated file when JWT_SECRET is not set (see jwt.sh).
 jwt_config:
   enabled: true
-  secret: "${JWT_SECRET}"
+  secret: "${JWT_SECRET_YAML}"
   algorithm: "HS256"
   subject_claim: "matrixUserId"
 
